@@ -1,0 +1,7 @@
+{
+  "name": "Sötétkamra Szimulátor",
+  "description": "Egy interaktív fotókémiai szimuláció, amely bemutatja a Camera Obscura felvételkészítést és a hagyományos sötétkamrai előhívási folyamatot.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
