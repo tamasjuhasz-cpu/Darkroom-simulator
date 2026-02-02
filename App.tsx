@@ -39,7 +39,7 @@ const App: React.FC = () => {
       const systemInstruction = "Készíts egy Camera Obscura stílusú fotót. A kép legyen erősen szemcsés, kissé életlen a széleken, lágy kontrasztokkal. Régies, 19. századi fotográfiai stílus, vignettálással. Csak fekete-fehér képet generálj. Kerüld a modern elemeket.";
       
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
+        model: 'gemini-3-flash-preview',
         contents: {
           parts: [{ text: `${systemInstruction} Téma: ${prompt}` }]
         },
@@ -96,49 +96,50 @@ const App: React.FC = () => {
     let contrast = 1;
     let opacity = 1;
 
+    // Fényérzékenységi görbe finomítása a felhasználó kérése alapján
     if (t <= 5) {
-      opacity = 0;
-    } else if (t <= 18) {
+      // Teljesen alulexponált: pozitívban fekete, negatívban fehér
+      brightness = 0; 
+      contrast = 1;
+    } else if (t < 18) {
+      // Alulexponált
       const factor = (t - 5) / 13;
-      opacity = factor * 0.9;
-      brightness = 1.35;
-      contrast = 0.6 + (factor * 0.4);
+      brightness = factor * 0.5; // Alacsony fényerő pozitívban -> sötét, nem szürke
+      contrast = 1.6 + (1 - factor); 
     } else if (t <= 32) {
-      opacity = 1;
+      // Tökéletes
       brightness = 1;
-      contrast = 1.25;
+      contrast = 1.3;
     } else if (t <= 55) {
+      // Túlexponált
       const factor = (t - 32) / 23;
-      opacity = 1;
-      brightness = 1 - (factor * 0.85);
-      contrast = 1.25 - (factor * 0.6);
+      brightness = 1 + (factor * 12); // Erős fehérség pozitívban -> beégés
+      contrast = 1.3 - (factor * 0.8); 
     } else {
-      opacity = 1;
-      brightness = 0.08;
-      contrast = 0.1;
+      // Teljes beégés
+      brightness = 100; // Pozitívban tiszta fehér, negatívban fekete
+      contrast = 1;
     }
 
-    filter += ` opacity(${opacity}) brightness(${brightness}) contrast(${contrast})`;
+    // Pozitív kép paraméterei
+    filter += ` brightness(${brightness}) contrast(${contrast})`;
 
+    // Ha negatívot nézünk, invertáljuk
     if (isNegativeMode) {
       filter += ' invert(100%)';
-    } else {
-      if (t > 32) {
-        const factor = Math.min(1, (t - 32) / 23);
-        filter = filter.replace(`brightness(${brightness})`, `brightness(${1 + factor * 5})`);
-      } else if (t < 18 && t > 5) {
-        const factor = (18 - t) / 13;
-        filter = filter.replace(`brightness(${brightness})`, `brightness(${1 - factor * 0.9})`);
-      }
     }
 
+    // Hibás fixálás hatása (sárgulás/fátyol)
     if (photo.isPoorlyFixed) {
-      filter += isNegativeMode ? ' sepia(0.2) brightness(0.9)' : ' sepia(0.5) hue-rotate(20deg) opacity(0.9)';
+      filter += isNegativeMode ? ' brightness(0.6) contrast(0.5)' : ' brightness(1.4) contrast(0.6) sepia(0.5)';
     }
     
+    // Labor folyamat szimulációja
     if (stage === AppStage.DARKROOM && !isReference) {
-        const currentOp = Math.max(0.01, photo.developmentLevel * opacity);
-        filter = filter.replace(`opacity(${opacity})`, `opacity(${currentOp})`);
+        const dev = Math.max(0.01, photo.developmentLevel);
+        // A hívás során az ezüst válik ki. Negatívban feketedik, pozitívban a kép tűnik elő.
+        // Itt az opacityvel szimuláljuk a kép megjelenését a papír alapszínén.
+        filter += ` opacity(${dev})`;
     }
 
     return filter;
@@ -172,11 +173,11 @@ const App: React.FC = () => {
   };
 
   const getExpertAdvice = () => {
-    if (photo.exposureTime <= 5) return "A papír fehér maradt. Az ezüst-halogenid szemcsék nem kaptak elég energiát az átalakuláshoz.";
-    if (photo.exposureTime < 18) return "A negatívod 'vékony'. Kevés a lerakódott fémezüst, ezért a kép kontrasztalan és szürke lesz.";
-    if (photo.exposureTime > 32 && photo.exposureTime <= 55) return "Túlexponált negatív. A papír túl sűrű lett, a finom részletek beleolvadtak a feketeségbe.";
-    if (photo.exposureTime > 55) return "Teljes beégés. A negatívod egy összefüggő fekete folt, az információ végleg elveszett.";
-    return "Tökéletes munka! Ez az ideális negatív sűrűség: megvannak a részletek az árnyékokban és a csúcsfényekben is.";
+    if (photo.exposureTime <= 5) return "A papírt szinte semmi fény nem érte. A negatívod üres (fehér), a pozitív kép tiszta fekete sötétség.";
+    if (photo.exposureTime < 18) return "Alulexponált. Kevés ezüst vált ki, ezért a pozitív kép sötét és részletszegény az árnyékokban.";
+    if (photo.exposureTime > 32 && photo.exposureTime <= 55) return "Túlexponált. Túl sok ezüst rakódott le, a világos részek (pozitívban) teljesen beégtek.";
+    if (photo.exposureTime > 55) return "Teljes beégés. A negatív sűrű fekete tömbbé vált, amin a fény nem tud áthatolni, így a pozitív papír fehér marad.";
+    return "Kiváló expozíció! A tónusok gazdagok, a részletek pedig minden tartományban jól látszanak.";
   };
 
   return (
@@ -306,20 +307,6 @@ const App: React.FC = () => {
                         </div>
                       ))}
                    </div>
-
-                   <div className="pt-8 border-t border-white/5 space-y-4">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Paraméterek</h4>
-                      <div className="space-y-3">
-                         <div className="flex justify-between items-center">
-                            <span className="text-[11px] text-zinc-400">Kémiai stabilitás</span>
-                            <span className={`text-[11px] font-bold ${photo.isFixed ? 'text-green-500' : 'text-red-500'}`}>{photo.isFixed ? 'STABIL' : 'INSTABIL'}</span>
-                         </div>
-                         <div className="flex justify-between items-center">
-                            <span className="text-[11px] text-zinc-400">Maradványok</span>
-                            <span className={`text-[11px] font-bold ${photo.isWashed ? 'text-green-500' : 'text-amber-500'}`}>{photo.isWashed ? 'ELTÁVOLÍTVA' : 'JELEN VAN'}</span>
-                         </div>
-                      </div>
-                   </div>
                 </div>
 
                 <div className="bg-zinc-900 border border-white/5 p-8 rounded-[2rem] shadow-xl">
@@ -336,7 +323,7 @@ const App: React.FC = () => {
                       </button>
                    </div>
                    <p className="text-[9px] text-zinc-500 leading-relaxed uppercase tracking-widest text-center opacity-50">
-                     A kapcsoló átfordítja a tónusokat.
+                     Átkapcsolás a látens kép és a kész másolat között.
                    </p>
                 </div>
               </div>

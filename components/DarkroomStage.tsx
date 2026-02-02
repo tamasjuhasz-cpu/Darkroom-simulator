@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { BathType, PhotoState } from '../types';
 import { BATH_DATA } from '../constants';
@@ -25,7 +24,7 @@ const DarkroomStage: React.FC<DarkroomStageProps> = ({ photo, getPhotoFilter, on
     [BathType.WASH]: 0
   });
 
-  // Accelerated time: 100ms in real world = 1 second in the lab
+  // Gyorsított idő: 100ms = 1mp a laborban (10x sebesség)
   useEffect(() => {
     let interval: number;
     if (currentBath && !isPhotoHeld) {
@@ -34,9 +33,7 @@ const DarkroomStage: React.FC<DarkroomStageProps> = ({ photo, getPhotoFilter, on
           const newTime = prev[currentBath] + 1;
           
           if (currentBath === BathType.DEVELOPER) {
-            // Development speed depends on chemical strength, here we assume optimal is 90s
-            // but we make it appear based on the simulated seconds.
-            onUpdate({ developmentLevel: Math.min(1, newTime / (BATH_DATA[BathType.DEVELOPER].optimalTime * 0.8)) });
+            onUpdate({ developmentLevel: Math.min(1, newTime / (BATH_DATA[BathType.DEVELOPER].optimalTime * 0.7)) });
           }
           if (currentBath === BathType.FIXER && newTime >= 40) {
             onUpdate({ isFixed: true, isPoorlyFixed: false });
@@ -45,12 +42,10 @@ const DarkroomStage: React.FC<DarkroomStageProps> = ({ photo, getPhotoFilter, on
             onUpdate({ isWashed: true });
           }
 
-          // Sync with global state for final report
           onUpdate({ bathTimers: { ...prev, [currentBath]: newTime } });
-
           return { ...prev, [currentBath]: newTime };
         });
-      }, 100); // 10x Speed
+      }, 100); 
     }
     return () => clearInterval(interval);
   }, [currentBath, isPhotoHeld, onUpdate]);
@@ -58,7 +53,6 @@ const DarkroomStage: React.FC<DarkroomStageProps> = ({ photo, getPhotoFilter, on
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsPhotoHeld(true);
-    // If pulled out of fixer too early, mark as poorly fixed
     if (currentBath === BathType.FIXER && timers[BathType.FIXER] < 40) {
       onUpdate({ isPoorlyFixed: true });
     }
@@ -88,7 +82,7 @@ const DarkroomStage: React.FC<DarkroomStageProps> = ({ photo, getPhotoFilter, on
           <div className="space-y-1">
             <h2 className="text-4xl font-black uppercase italic tracking-tighter">Sötétkamra Labor</h2>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-60">
-              Tartsd nyomva a bal gombot a vonszoláshoz, engedd el a tálca felett. (10x Gyorsítás)
+              Vonszold a papírt a tálcákba. (10x Gyorsított idő)
             </p>
           </div>
           <button 
@@ -112,7 +106,7 @@ const DarkroomStage: React.FC<DarkroomStageProps> = ({ photo, getPhotoFilter, on
         </div>
       </header>
 
-      {/* INITIAL TABLE PREP */}
+      {/* Kezdő asztal, ha nincs tálcában és nincs megfogva */}
       {!currentBath && !isPhotoHeld && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-700">
           <div className="text-[10px] font-black uppercase tracking-[0.3em] opacity-30 mb-2 italic">Exponált papír</div>
@@ -131,7 +125,7 @@ const DarkroomStage: React.FC<DarkroomStageProps> = ({ photo, getPhotoFilter, on
         </div>
       )}
 
-      {/* DRAGGING PHOTO */}
+      {/* Megfogott kép vizuálja */}
       {isPhotoHeld && (
         <div 
           className="fixed pointer-events-none z-[100] transition-transform duration-75"
@@ -141,80 +135,24 @@ const DarkroomStage: React.FC<DarkroomStageProps> = ({ photo, getPhotoFilter, on
             <img 
               src={photo.baseImageUrl} 
               className="w-full h-full object-cover"
-              style={{ filter: getPhotoFilter(), opacity: Math.max(0.1, photo.developmentLevel || 0) }}
+              style={{ filter: getPhotoFilter() }}
               alt="Held print"
             />
-            <div className="absolute inset-0 bg-white" style={{ opacity: Math.max(0, 1 - (photo.developmentLevel || 0)) }} />
           </div>
         </div>
       )}
 
-      <div className="flex-1 flex flex-col items-center justify-end gap-10 p-12 pb-24">
-        <div className="flex items-center justify-center gap-6 w-full max-w-7xl">
-          {(Object.keys(BATH_DATA) as BathType[]).map((type) => {
-            const bath = BATH_DATA[type];
-            const hasPhoto = currentBath === type && !isPhotoHeld;
-            const isTarget = hoveredBath === type && isPhotoHeld;
-            const progress = timers[type];
-            const percentage = Math.min(100, (progress / bath.optimalTime) * 100);
-            
-            return (
-              <div key={type} className="flex flex-col items-center gap-4 flex-1 max-w-[280px]">
-                <div 
-                  onMouseEnter={() => setHoveredBath(type)}
-                  onMouseLeave={() => setHoveredBath(null)}
-                  className={`relative w-full aspect-[4/5] rounded-[2rem] border-4 transition-all duration-500 overflow-hidden
-                    ${hasPhoto ? 'border-red-600 scale-105 shadow-[0_0_50px_rgba(220,38,38,0.4)] bg-red-950/20' : isTarget ? 'border-red-500 scale-110 bg-red-900/10 shadow-2xl' : 'border-white/5 bg-white/5 shadow-inner'}`}
-                >
-                  <div className={`absolute inset-0 ${bath.color} opacity-30`} />
-                  
-                  {hasPhoto && (
-                    <div 
-                      onMouseDown={handleMouseDown}
-                      className="absolute inset-8 cursor-grab active:cursor-grabbing group animate-in fade-in zoom-in duration-300"
-                    >
-                      <div className="relative w-full h-full bg-white shadow-2xl overflow-hidden rounded-sm group-hover:rotate-1 transition-transform p-1">
-                         <img src={photo.baseImageUrl} className="w-full h-full object-cover" style={{ filter: getPhotoFilter(), opacity: photo.developmentLevel }} alt="In bath" />
-                         <div className="absolute inset-0 bg-white" style={{ opacity: 1 - (photo.developmentLevel || 0) }} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="w-full text-center space-y-2 px-1">
-                   <h3 className={`text-[11px] font-black uppercase tracking-[0.2em] ${hasPhoto || isTarget ? 'text-white' : 'text-white/20'}`}>{bath.name}</h3>
-                   
-                   <div className="flex justify-between items-center px-1 mb-1">
-                      <div className="flex flex-col items-start text-left">
-                        <span className="text-[7px] font-bold text-white/20 uppercase tracking-tighter">Javasolt</span>
-                        <span className="text-[9px] font-black text-white/30">{bath.optimalTime}s</span>
-                      </div>
-                      <div className="flex flex-col items-end text-right">
-                        <span className="text-[7px] font-bold text-white/20 uppercase tracking-tighter">Eltelt</span>
-                        <span className={`text-[9px] font-black ${hasPhoto ? 'text-red-500 animate-pulse' : 'text-white/30'}`}>{progress}s</span>
-                      </div>
-                   </div>
-
-                   <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/10">
-                      <div 
-                        className={`h-full transition-all duration-300 ${type === BathType.FIXER && progress < 40 ? 'bg-amber-500 animate-pulse' : 'bg-red-600'}`} 
-                        style={{ width: `${percentage}%` }} 
-                      />
-                   </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="h-16 flex items-center justify-center w-full">
+      <div className="flex-1 flex flex-col items-center justify-center gap-6 p-12 overflow-y-auto">
+        
+        {/* Kritikus állapot jelzés a tálcák felett */}
+        <div className="h-24 flex items-center justify-center w-full mb-4">
           {isCriticalFix ? (
-            <div className="flex items-center gap-6 px-10 py-5 bg-red-600 text-white rounded-3xl text-[13px] font-black uppercase animate-bounce shadow-[0_25px_60px_rgba(220,38,38,0.6)] border border-red-400/30">
-              <AlertTriangle className="w-6 h-6" /> 
-              VIGYÁZAT! KRITIKUS FIXÁLÁSI IDŐ - NE VEDD KI A KÉPET! ({timers[BathType.FIXER]}/40s)
+            <div className="flex items-center gap-6 px-12 py-6 bg-red-600 text-white rounded-3xl text-[14px] font-black uppercase animate-bounce shadow-[0_30px_70px_rgba(220,38,38,0.7)] border border-red-400/40">
+              <AlertTriangle className="w-7 h-7" /> 
+              VIGYÁZAT! KRITIKUS FIXÁLÁSI IDŐ - NE VEDD KI! ({timers[BathType.FIXER]}/40s)
             </div>
           ) : (
-            <div className="text-[9px] font-black uppercase tracking-[0.4em] text-white/10 flex items-center gap-8">
+            <div className="text-[10px] font-black uppercase tracking-[0.5em] text-white/10 flex items-center gap-10">
               <span>HÍVÁS</span>
               <div className="w-1.5 h-1.5 rounded-full bg-white/5" />
               <span>STOP</span>
@@ -224,6 +162,65 @@ const DarkroomStage: React.FC<DarkroomStageProps> = ({ photo, getPhotoFilter, on
               <span>MOSÁS</span>
             </div>
           )}
+        </div>
+
+        <div className="flex items-start justify-center gap-8 w-full max-w-7xl">
+          {(Object.keys(BATH_DATA) as BathType[]).map((type) => {
+            const bath = BATH_DATA[type];
+            const hasPhoto = currentBath === type && !isPhotoHeld;
+            const isTarget = hoveredBath === type && isPhotoHeld;
+            const progress = timers[type];
+            const percentage = Math.min(100, (progress / bath.optimalTime) * 100);
+            
+            return (
+              <div key={type} className="flex flex-col items-center gap-5 flex-1 max-w-[280px]">
+                
+                {/* Tálca adatai felül */}
+                <div className="w-full text-center space-y-2 px-1 mb-2">
+                   <h3 className={`text-[12px] font-black uppercase tracking-[0.25em] ${hasPhoto || isTarget ? 'text-white' : 'text-white/20'}`}>{bath.name}</h3>
+                   
+                   <div className="flex justify-between items-center px-2">
+                      <div className="flex flex-col items-start text-left">
+                        <span className="text-[8px] font-bold text-white/20 uppercase tracking-tighter">Javasolt</span>
+                        <span className="text-[10px] font-black text-white/30">{bath.optimalTime}s</span>
+                      </div>
+                      <div className="flex flex-col items-end text-right">
+                        <span className="text-[8px] font-bold text-white/20 uppercase tracking-tighter">Eltelt</span>
+                        <span className={`text-[10px] font-black ${hasPhoto ? 'text-red-500 animate-pulse' : 'text-white/30'}`}>{progress}s</span>
+                      </div>
+                   </div>
+
+                   <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden border border-white/10">
+                      <div 
+                        className={`h-full transition-all duration-300 ${type === BathType.FIXER && progress < 40 ? 'bg-amber-500 animate-pulse' : 'bg-red-600'}`} 
+                        style={{ width: `${percentage}%` }} 
+                      />
+                   </div>
+                </div>
+
+                {/* Tálca vizuál */}
+                <div 
+                  onMouseEnter={() => setHoveredBath(type)}
+                  onMouseLeave={() => setHoveredBath(null)}
+                  className={`relative w-full aspect-[4/5] rounded-[2.5rem] border-[6px] transition-all duration-500 overflow-hidden
+                    ${hasPhoto ? 'border-red-600 scale-105 shadow-[0_0_60px_rgba(220,38,38,0.5)] bg-red-950/30' : isTarget ? 'border-red-500 scale-110 bg-red-900/10 shadow-3xl' : 'border-white/5 bg-white/5 shadow-inner'}`}
+                >
+                  <div className={`absolute inset-0 ${bath.color} opacity-30`} />
+                  
+                  {hasPhoto && (
+                    <div 
+                      onMouseDown={handleMouseDown}
+                      className="absolute inset-8 cursor-grab active:cursor-grabbing group animate-in fade-in zoom-in duration-300"
+                    >
+                      <div className="relative w-full h-full bg-white shadow-2xl overflow-hidden rounded-sm group-hover:rotate-1 transition-transform p-1.5">
+                         <img src={photo.baseImageUrl} className="w-full h-full object-cover" style={{ filter: getPhotoFilter() }} alt="In bath" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
