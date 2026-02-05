@@ -50,7 +50,7 @@ const DryingStage: React.FC<DryingStageProps> = ({ photo, getPhotoFilter, onUpda
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-bold uppercase tracking-widest flex items-center justify-center gap-3 text-white">
             <Thermometer className="text-orange-500 animate-pulse" />
-            Fényesítő Szárítógép
+            Szárítógép
           </h2>
           <p className="text-white/40 text-sm max-w-md mx-auto">
             A fémlemezre simított képet a feszített vászon szorítja le, miközben a hő eltávolítja a nedvességet.

@@ -94,7 +94,13 @@ const DarkroomStage: React.FC<DarkroomStageProps> = ({ photo, getPhotoFilter, on
           </button>
         </div>
 
-        <div>
+        <div className="flex items-center gap-4">
+          {isCriticalFix && (
+            <div className="flex items-center gap-3 px-6 py-4 bg-red-600 text-white rounded-2xl text-[11px] font-black uppercase animate-bounce shadow-xl border border-red-400/40">
+              <AlertTriangle className="w-5 h-5" /> 
+              KRITIKUS FIXÁLÁS! ({timers[BathType.FIXER]}/40s)
+            </div>
+          )}
           {(photo.isWashed || timers[BathType.WASH] > 30) && (
             <button 
               onClick={onFinish}
@@ -109,7 +115,7 @@ const DarkroomStage: React.FC<DarkroomStageProps> = ({ photo, getPhotoFilter, on
       {/* Kezdő asztal, ha nincs tálcában és nincs megfogva */}
       {!currentBath && !isPhotoHeld && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-700">
-          <div className="text-[10px] font-black uppercase tracking-[0.3em] opacity-30 mb-2 italic">Exponált papír</div>
+          <div className={`text-[10px] font-black uppercase tracking-[0.3em] mb-2 italic ${isWhiteLightOn ? 'text-black/30' : 'text-white/30'}`}>Exponált papír</div>
           <div 
             onMouseDown={handleMouseDown}
             className="w-56 aspect-[3/4] bg-white shadow-[0_40px_80px_rgba(0,0,0,0.8)] border border-zinc-300 cursor-grab active:cursor-grabbing hover:scale-105 transition-transform p-1.5"
@@ -144,24 +150,17 @@ const DarkroomStage: React.FC<DarkroomStageProps> = ({ photo, getPhotoFilter, on
 
       <div className="flex-1 flex flex-col items-center justify-center gap-6 p-12 overflow-y-auto">
         
-        {/* Kritikus állapot jelzés a tálcák felett */}
+        {/* Dekorációs státuszjelző a tálcák felett */}
         <div className="h-24 flex items-center justify-center w-full mb-4">
-          {isCriticalFix ? (
-            <div className="flex items-center gap-6 px-12 py-6 bg-red-600 text-white rounded-3xl text-[14px] font-black uppercase animate-bounce shadow-[0_30px_70px_rgba(220,38,38,0.7)] border border-red-400/40">
-              <AlertTriangle className="w-7 h-7" /> 
-              VIGYÁZAT! KRITIKUS FIXÁLÁSI IDŐ - NE VEDD KI! ({timers[BathType.FIXER]}/40s)
-            </div>
-          ) : (
-            <div className="text-[10px] font-black uppercase tracking-[0.5em] text-white/10 flex items-center gap-10">
-              <span>HÍVÁS</span>
-              <div className="w-1.5 h-1.5 rounded-full bg-white/5" />
-              <span>STOP</span>
-              <div className="w-1.5 h-1.5 rounded-full bg-white/5" />
-              <span>FIXÁLÁS</span>
-              <div className="w-1.5 h-1.5 rounded-full bg-white/5" />
-              <span>MOSÁS</span>
-            </div>
-          )}
+          <div className={`text-[10px] font-black uppercase tracking-[0.5em] flex items-center gap-10 ${isWhiteLightOn ? 'text-black/10' : 'text-white/10'}`}>
+            <span>HÍVÁS</span>
+            <div className={`w-1.5 h-1.5 rounded-full ${isWhiteLightOn ? 'bg-black/5' : 'bg-white/5'}`} />
+            <span>STOP</span>
+            <div className={`w-1.5 h-1.5 rounded-full ${isWhiteLightOn ? 'bg-black/5' : 'bg-white/5'}`} />
+            <span>FIXÁLÁS</span>
+            <div className={`w-1.5 h-1.5 rounded-full ${isWhiteLightOn ? 'bg-black/5' : 'bg-white/5'}`} />
+            <span>MOSÁS</span>
+          </div>
         </div>
 
         <div className="flex items-start justify-center gap-8 w-full max-w-7xl">
@@ -177,20 +176,20 @@ const DarkroomStage: React.FC<DarkroomStageProps> = ({ photo, getPhotoFilter, on
                 
                 {/* Tálca adatai felül */}
                 <div className="w-full text-center space-y-2 px-1 mb-2">
-                   <h3 className={`text-[12px] font-black uppercase tracking-[0.25em] ${hasPhoto || isTarget ? 'text-white' : 'text-white/20'}`}>{bath.name}</h3>
+                   <h3 className={`text-[12px] font-black uppercase tracking-[0.25em] ${hasPhoto || isTarget ? (isWhiteLightOn ? 'text-black' : 'text-white') : (isWhiteLightOn ? 'text-black/30' : 'text-white/20')}`}>{bath.name}</h3>
                    
                    <div className="flex justify-between items-center px-2">
                       <div className="flex flex-col items-start text-left">
-                        <span className="text-[8px] font-bold text-white/20 uppercase tracking-tighter">Javasolt</span>
-                        <span className="text-[10px] font-black text-white/30">{bath.optimalTime}s</span>
+                        <span className={`text-[8px] font-bold uppercase tracking-tighter ${isWhiteLightOn ? 'text-black/40' : 'text-white/20'}`}>Javasolt</span>
+                        <span className={`text-[10px] font-black ${isWhiteLightOn ? 'text-black/60' : 'text-white/30'}`}>{bath.optimalTime}s</span>
                       </div>
                       <div className="flex flex-col items-end text-right">
-                        <span className="text-[8px] font-bold text-white/20 uppercase tracking-tighter">Eltelt</span>
-                        <span className={`text-[10px] font-black ${hasPhoto ? 'text-red-500 animate-pulse' : 'text-white/30'}`}>{progress}s</span>
+                        <span className={`text-[8px] font-bold uppercase tracking-tighter ${isWhiteLightOn ? 'text-black/40' : 'text-white/20'}`}>Eltelt</span>
+                        <span className={`text-[10px] font-black ${hasPhoto ? (isWhiteLightOn ? 'text-red-700 animate-pulse' : 'text-red-500 animate-pulse') : (isWhiteLightOn ? 'text-black/60' : 'text-white/30')}`}>{progress}s</span>
                       </div>
                    </div>
 
-                   <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden border border-white/10">
+                   <div className={`w-full h-2 rounded-full overflow-hidden border ${isWhiteLightOn ? 'bg-black/5 border-black/5' : 'bg-white/5 border-white/10'}`}>
                       <div 
                         className={`h-full transition-all duration-300 ${type === BathType.FIXER && progress < 40 ? 'bg-amber-500 animate-pulse' : 'bg-red-600'}`} 
                         style={{ width: `${percentage}%` }} 
@@ -203,7 +202,7 @@ const DarkroomStage: React.FC<DarkroomStageProps> = ({ photo, getPhotoFilter, on
                   onMouseEnter={() => setHoveredBath(type)}
                   onMouseLeave={() => setHoveredBath(null)}
                   className={`relative w-full aspect-[4/5] rounded-[2.5rem] border-[6px] transition-all duration-500 overflow-hidden
-                    ${hasPhoto ? 'border-red-600 scale-105 shadow-[0_0_60px_rgba(220,38,38,0.5)] bg-red-950/30' : isTarget ? 'border-red-500 scale-110 bg-red-900/10 shadow-3xl' : 'border-white/5 bg-white/5 shadow-inner'}`}
+                    ${hasPhoto ? 'border-red-600 scale-105 shadow-[0_0_60px_rgba(220,38,38,0.5)] bg-red-950/30' : isTarget ? 'border-red-500 scale-110 bg-red-900/10 shadow-3xl' : (isWhiteLightOn ? 'border-black/5 bg-black/5 shadow-inner' : 'border-white/5 bg-white/5 shadow-inner')}`}
                 >
                   <div className={`absolute inset-0 ${bath.color} opacity-30`} />
                   
